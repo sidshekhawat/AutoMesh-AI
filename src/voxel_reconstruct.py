@@ -69,6 +69,88 @@ def create_silhouette(image):
 
     return binary
 
+def create_voxel_grid():
+
+    length = 128
+    width = 64
+    height = 64
+
+    voxels = np.ones(
+        (length, width, height),
+        dtype=bool
+    )
+
+    return voxels
+
+def load_silhouette(path):
+
+    image = cv2.imread(
+        path,
+        cv2.IMREAD_GRAYSCALE
+    )
+
+    if image is None:
+        raise FileNotFoundError(
+            f"Could not load {path}"
+        )
+
+    return image
+
+def resize_silhouettes(side, front, top):
+
+    side = cv2.resize(
+        side,
+        (128, 64)
+    )
+
+    front = cv2.resize(
+        front,
+        (64, 64)
+    )
+
+    top = cv2.resize(
+        top,
+        (128, 64)
+    )
+
+    return side, front, top
+
+def carve_top_view(voxels, top):
+
+    for x in range(128):
+
+        for y in range(64):
+
+            if top[y, x] == 0:
+
+                voxels[x, y, :] = False
+
+    return voxels
+
+def carve_side_view(voxels, side):
+
+    for x in range(128):
+
+        for z in range(64):
+
+            if side[z, x] == 0:
+
+                voxels[x, :, z] = False
+
+    return voxels
+
+def carve_front_view(voxels, front):
+
+    for y in range(64):
+
+        for z in range(64):
+
+            if front[z, y] == 0:
+
+                voxels[:, y, z] = False
+
+    return voxels
+
 def analyze_band(band_path):
 
     band_name = os.path.basename(
@@ -234,6 +316,82 @@ def main():
         cv2.imwrite(filename, band)
 
         print(f"Saved {filename}")
+
+    side = load_silhouette(
+        "outputs/views/band_1_view_1_silhouette.png"
+    )
+
+    front = load_silhouette(
+        "outputs/views/band_3_view_2_silhouette.png"
+    )
+
+    top = load_silhouette(
+        "outputs/views/band_4_view_1_silhouette.png"
+    )
+
+    side, front, top = resize_silhouettes(
+        side,
+        front,
+        top
+    )
+
+    print(
+        f"Resized Side: {side.shape}"
+    )
+
+    print(
+        f"Resized Front: {front.shape}"
+    )
+
+    print(
+        f"Resized Top: {top.shape}"
+    )
+
+    print(
+        f"Front Silhouette Shape: {front.shape}"
+    )
+
+    print(
+        f"Top Silhouette Shape: {top.shape}"
+    )
+
+    print(
+        f"Side Silhouette Shape: {side.shape}"
+    )
+
+    voxels = create_voxel_grid()
+    print(
+        f"Voxel Grid Shape: {voxels.shape}"
+    )
+
+    voxels = carve_top_view(
+        voxels,
+        top
+    )
+
+    voxels = carve_side_view(
+        voxels,
+        side
+    )
+
+    voxels = carve_front_view(
+        voxels,
+        front
+    )
+
+    print(
+        f"Remaining Voxels After Front Carving: "
+        f"{np.sum(voxels)}"
+    )
+
+    np.save(
+        "outputs/vehicle_voxels.npy",
+        voxels
+    )
+
+    print(
+        "Voxel volume saved."
+    )
 
 
 if __name__ == "__main__":
