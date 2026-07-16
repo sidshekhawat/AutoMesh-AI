@@ -1,6 +1,6 @@
 import cv2
 import os
-
+import numpy as np
 
 BLUEPRINT_PATH = "data/blueprints/car_blueprint.jpeg"
 
@@ -12,6 +12,62 @@ def load_blueprint(path):
         raise FileNotFoundError(f"Could not load image: {path}")
 
     return image
+
+def create_silhouette(image):
+
+    gray = cv2.cvtColor(
+        image,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    _, binary = cv2.threshold(
+        gray,
+        200,
+        255,
+        cv2.THRESH_BINARY_INV
+    )
+
+    kernel = np.ones((5, 5), np.uint8)
+
+    binary = cv2.morphologyEx(
+        binary,
+        cv2.MORPH_CLOSE,
+        kernel,
+        iterations=2
+    )
+
+    binary = cv2.dilate(
+        binary,
+        kernel,
+        iterations=1
+    )
+
+    contours, _ = cv2.findContours(
+        binary,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    if contours:
+
+        largest = max(
+            contours,
+            key=cv2.contourArea
+        )
+
+        mask = np.zeros_like(binary)
+
+        cv2.drawContours(
+            mask,
+            [largest],
+            -1,
+            255,
+            thickness=cv2.FILLED
+        )
+
+        binary = mask
+
+    return binary
 
 def analyze_band(band_path):
 
@@ -70,16 +126,32 @@ def analyze_band(band_path):
 
         crop = band[:, start_col:end_col]
 
+        silhouette = create_silhouette(crop)
+
         band_name = band_path.split("/")[-1].replace(".png", "")
 
-        filename = (
+        view_filename = (
             f"outputs/views/"
             f"{band_name}_view_{i}.png"
         )
 
-        cv2.imwrite(filename, crop)
+        silhouette_filename = (
+            f"outputs/views/"
+            f"{band_name}_view_{i}_silhouette.png"
+        )
 
-        print(f"Saved {filename}")
+        cv2.imwrite(
+            view_filename,
+            crop
+        )
+
+        cv2.imwrite(
+            silhouette_filename,
+            silhouette
+        )
+
+        print(f"Saved {view_filename}")
+        print(f"Saved {silhouette_filename}")
 
     cv2.imshow("Band Binary", binary)
 
