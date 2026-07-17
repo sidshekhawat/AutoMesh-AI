@@ -1,12 +1,13 @@
-import open3d as o3d
+import pyvista as pv
 
-mesh = o3d.io.read_triangle_mesh(
+reader = pv.get_reader(
     "outputs/vehicle.obj"
 )
 
-mesh.compute_vertex_normals()
+mesh = reader.read()
 
-o3d.visualization.draw_geometries(
-    [mesh],
-    window_name="AutoMesh AI"
-)
+print(mesh)
+
+plotter = pv.Plotter()
+plotter.add_mesh(mesh)
+plotter.show()

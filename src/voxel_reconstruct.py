@@ -71,9 +71,9 @@ def create_silhouette(image):
 
 def create_voxel_grid():
 
-    length = 128
-    width = 64
-    height = 64
+    length = 256
+    width = 128
+    height = 128
 
     voxels = np.ones(
         (length, width, height),
@@ -94,62 +94,129 @@ def load_silhouette(path):
             f"Could not load {path}"
         )
 
+
+    _, image = cv2.threshold(
+        image,
+        127,
+        255,
+        cv2.THRESH_BINARY
+    )
+
     return image
+
+def get_bbox(binary):
+
+    ys, xs = np.where(binary > 0)
+
+    x_min = xs.min()
+    x_max = xs.max()
+
+    y_min = ys.min()
+    y_max = ys.max()
+
+    return (
+        x_min,
+        y_min,
+        x_max,
+        y_max
+    )
+def fit_to_canvas(image, canvas_width, canvas_height):
+
+    ys, xs = np.where(image > 0)
+
+    x1, x2 = xs.min(), xs.max()
+    y1, y2 = ys.min(), ys.max()
+
+    cropped = image[y1:y2+1, x1:x2+1]
+
+    h, w = cropped.shape
+
+    scale = min(
+        canvas_width / w,
+        canvas_height / h
+    )
+
+    new_w = int(w * scale)
+    new_h = int(h * scale)
+
+    resized = cv2.resize(
+        cropped,
+        (new_w, new_h),
+        interpolation=cv2.INTER_NEAREST
+    )
+
+    canvas = np.zeros(
+        (canvas_height, canvas_width),
+        dtype=np.uint8
+    )
+
+    x_offset = (canvas_width - new_w) // 2
+    y_offset = (canvas_height - new_h) // 2
+
+    canvas[
+        y_offset:y_offset + new_h,
+        x_offset:x_offset + new_w
+    ] = resized
+
+    return canvas
 
 def resize_silhouettes(side, front, top):
 
     side = cv2.resize(
         side,
-        (128, 64)
+        (256, 128)
     )
 
     front = cv2.resize(
         front,
-        (64, 64)
+        (128, 128)
     )
 
     top = cv2.resize(
         top,
-        (128, 64)
+        (256, 128)
     )
 
     return side, front, top
 
 def carve_top_view(voxels, top):
 
-    for x in range(128):
+    length, width, height = voxels.shape
 
-        for y in range(64):
+    for x in range(length):
+        for y in range(width):
 
             if top[y, x] == 0:
-
                 voxels[x, y, :] = False
 
     return voxels
 
+
 def carve_side_view(voxels, side):
 
-    for x in range(128):
+    length, width, height = voxels.shape
 
-        for z in range(64):
+    for x in range(length):
+        for z in range(height):
 
             if side[z, x] == 0:
-
                 voxels[x, :, z] = False
 
     return voxels
 
+
 def carve_front_view(voxels, front):
 
-    for y in range(64):
+    length, width, height = voxels.shape
 
-        for z in range(64):
+    for y in range(width):
+        for z in range(height):
 
             if front[z, y] == 0:
-
                 voxels[:, y, z] = False
 
     return voxels
+
 
 def analyze_band(band_path):
 
@@ -318,7 +385,7 @@ def main():
         print(f"Saved {filename}")
 
     side = load_silhouette(
-        "outputs/views/band_1_view_1_silhouette.png"
+        "outputs/views/band_3_view_1_silhouette.png"
     )
 
     front = load_silhouette(
@@ -329,11 +396,61 @@ def main():
         "outputs/views/band_4_view_1_silhouette.png"
     )
 
-    side, front, top = resize_silhouettes(
+    side_bbox = get_bbox(side)
+    front_bbox = get_bbox(front)
+    top_bbox = get_bbox(top)
+
+    print("\nBounding Boxes")
+    print("Side :", side_bbox)
+    print("Front:", front_bbox)
+    print("Top  :", top_bbox)
+
+    side_width = side_bbox[2] - side_bbox[0] + 1
+    side_height = side_bbox[3] - side_bbox[1] + 1
+
+    front_width = front_bbox[2] - front_bbox[0] + 1
+    front_height = front_bbox[3] - front_bbox[1] + 1
+
+    top_width = top_bbox[2] - top_bbox[0] + 1
+    top_height = top_bbox[3] - top_bbox[1] + 1
+
+    print("\nVehicle Dimensions")
+    print(f"Side : {side_width} x {side_height}")
+    print(f"Front: {front_width} x {front_height}")
+    print(f"Top  : {top_width} x {top_height}")
+
+    print("\nConsistency Check")
+
+    print("Length from Side:", side_width)
+    print("Length from Top :", top_width)
+
+    print("Height from Side:", side_height)
+    print("Height from Front:", front_height)
+
+    print("Width from Front:", front_width)
+    print("Width from Top  :", top_height)
+
+    print("\nScale Ratios")
+
+    print("Length Ratio (Side/Top):",
+        round(side_width / top_width, 2))
+
+    print("Height Ratio (Side/Front):",
+        round(side_height / front_height, 2))
+
+    print("Width Ratio (Front/Top):",
+        round(front_width / top_height, 2))
+    
+    side, front, top = resize_silhouettes( 
         side,
         front,
         top
     )
+    cv2.imwrite("outputs/debug_top.png", top)
+    cv2.imwrite("outputs/debug_side.png", side)
+    cv2.imwrite("outputs/debug_front.png", front)
+
+    print("Saved debug silhouettes")
 
     print(
         f"Resized Side: {side.shape}"
@@ -363,6 +480,15 @@ def main():
     print(
         f"Voxel Grid Shape: {voxels.shape}"
     )
+
+    print("\nSilhouette Values")
+    print("Side :", np.unique(side))
+    print("Front:", np.unique(front))
+    print("Top  :", np.unique(top))
+
+    print("Top shape:", top.shape)
+    print("Side shape:", side.shape)
+    print("Front shape:", front.shape)
 
     voxels = carve_top_view(
         voxels,

@@ -16,7 +16,7 @@ ax = fig.add_subplot(
 
 ax.voxels(
     voxels,
-    edgecolor="k"
+    edgecolor=None
 )
 
 plt.show()
