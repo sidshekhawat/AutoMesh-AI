@@ -3,3 +3,7 @@ __pycache__/
 .DS_Store
 .vscode/
 outputs/
+outputs/
+data/photos/
+*.pt
+src/debug_mesh.py
