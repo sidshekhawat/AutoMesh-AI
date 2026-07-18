@@ -21,6 +21,16 @@ def load_depth_map(path):
 
     return depth
 
+def normalize_depth(depth):
+    """
+    Normalize depth values to the range [0, 1].
+    """
+
+    depth = depth.astype(np.float32)
+
+    depth /= 255.0
+
+    return depth
 
 def inspect_depth_map(depth):
     """
@@ -55,7 +65,7 @@ def depth_to_pointcloud(depth):
     for v in range(height):
         for u in range(width):
 
-            z = float(depth[v, u]) / 255.0
+            z = float(depth[v, u])
 
             # Ignore invalid points
             if z <= 0:
@@ -73,6 +83,8 @@ def main():
     depth = load_depth_map(DEPTH_MAP_PATH)
 
     inspect_depth_map(depth)
+
+    depth = normalize_depth(depth)
 
     points = depth_to_pointcloud(depth)
 
