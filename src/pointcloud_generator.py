@@ -4,6 +4,7 @@ import os
 
 
 DEPTH_MAP_PATH = "outputs/depth/depth_map.png"
+MASK_PATH = "outputs/masks/vehicle_mask.png"
 
 
 def load_depth_map(path):
@@ -31,6 +32,45 @@ def normalize_depth(depth):
     depth /= 255.0
 
     return depth
+
+def apply_vehicle_mask(depth, mask):
+    """
+    Keep only vehicle pixels in the depth map.
+    Background pixels become zero.
+    """
+
+    if depth.shape != mask.shape:
+        raise ValueError(
+            "Depth map and mask dimensions do not match."
+        )
+
+    masked_depth = depth.copy()
+
+    masked_depth[mask == 0] = 0
+
+    return masked_depth
+
+def load_vehicle_mask(path):
+    """
+    Load the binary vehicle mask.
+    """
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Mask not found: {path}"
+        )
+
+    mask = cv2.imread(
+        path,
+        cv2.IMREAD_GRAYSCALE
+    )
+
+    if mask is None:
+        raise ValueError(
+            "Failed to load vehicle mask."
+        )
+
+    return mask
 
 def inspect_depth_map(depth):
     """
@@ -85,6 +125,16 @@ def main():
     inspect_depth_map(depth)
 
     depth = normalize_depth(depth)
+
+    mask = load_vehicle_mask(MASK_PATH)
+
+    print("Mask Shape :", mask.shape)
+    print("Mask Type  :", mask.dtype)
+    print("Mask Values:", np.unique(mask))
+
+    depth = apply_vehicle_mask(depth, mask)
+    print("Remaining Depth Pixels:",
+      np.count_nonzero(depth))
 
     points = depth_to_pointcloud(depth)
 
