@@ -6,6 +6,11 @@ import os
 DEPTH_MAP_PATH = "outputs/depth/depth_map.png"
 MASK_PATH = "outputs/masks/vehicle_mask.png"
 
+POINTCLOUD_OUTPUT = "outputs/pointcloud"
+PLY_OUTPUT = os.path.join(
+    POINTCLOUD_OUTPUT,
+    "vehicle_pointcloud.ply"
+)
 
 def load_depth_map(path):
     """
@@ -118,6 +123,33 @@ def depth_to_pointcloud(depth):
 
     return np.array(points, dtype=np.float32)
 
+def save_pointcloud(points, output_path):
+    """
+    Save the point cloud as an ASCII PLY file.
+    """
+
+    os.makedirs(
+        os.path.dirname(output_path),
+        exist_ok=True
+    )
+
+    with open(output_path, "w") as file:
+
+        file.write("ply\n")
+        file.write("format ascii 1.0\n")
+        file.write(f"element vertex {len(points)}\n")
+
+        file.write("property float x\n")
+        file.write("property float y\n")
+        file.write("property float z\n")
+
+        file.write("end_header\n")
+
+        for point in points:
+            file.write(
+                f"{point[0]} {point[1]} {point[2]}\n"
+            )
+
 def main():
 
     depth = load_depth_map(DEPTH_MAP_PATH)
@@ -142,6 +174,10 @@ def main():
     print("First Five Points:\n")
     print(points[:5])
 
+    save_pointcloud(points, PLY_OUTPUT)
+
+    print("Point cloud saved to:")
+    print(PLY_OUTPUT)
 
 if __name__ == "__main__":
     main()
