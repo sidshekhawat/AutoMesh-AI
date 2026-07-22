@@ -97,6 +97,52 @@ def rotate_pointcloud(
 
     return rotated_cloud
 
+def translate_pointcloud(
+    pointcloud,
+    tx,
+    ty,
+    tz
+):
+    """
+    Translate a point cloud.
+
+    Args:
+        pointcloud (PointCloud)
+        tx (float)
+        ty (float)
+        tz (float)
+
+    Returns:
+        PointCloud
+    """
+    points = np.array(
+        pointcloud.points,
+        dtype=np.float64,
+        copy=True
+    )
+
+    translation = np.array([
+        tx,
+        ty,
+        tz
+    ], dtype=np.float64)
+
+    translated_points = points + translation
+
+    translated_cloud = o3d.geometry.PointCloud()
+
+    translated_cloud.points = o3d.utility.Vector3dVector(
+        translated_points
+    )
+
+    if pointcloud.has_colors():
+        translated_cloud.colors = pointcloud.colors
+
+    if pointcloud.has_normals():
+        translated_cloud.normals = pointcloud.normals
+
+    return translated_cloud
+
 
 def main():
 
@@ -104,18 +150,21 @@ def main():
         "outputs/pointcloud/front.ply"
     )
 
-    rotated = rotate_pointcloud(
+    translated = translate_pointcloud(
         pointcloud,
-        angle=90,
-        axis="y"
+        tx=1.0,
+        ty=0.0,
+        tz=0.0
     )
 
     save_pointcloud(
-        rotated,
-        "outputs/registration/front_rotated.ply"
+        translated,
+        "outputs/registration/front_translated.ply"
     )
 
-    print("Rotation complete.")
+    print("Translation complete.")
+
 
 if __name__ == "__main__":
     main()
+
