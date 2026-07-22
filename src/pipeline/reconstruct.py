@@ -1,3 +1,9 @@
+import os
+
+from src.dataset.loader import (
+    load_vehicle_dataset
+)
+
 from src.segmentation.segment import (
     segment_vehicle,
     save_segmentation
@@ -11,7 +17,6 @@ from src.depth.estimate import (
 from src.pointcloud.generate import (
     generate_pointcloud,
     save_pointcloud,
-    PLY_OUTPUT
 )
 
 from src.pointcloud.visualize import (
@@ -23,12 +28,19 @@ CUTOUT_OUTPUT = "outputs/cutouts/vehicle_cutout.png"
 
 DEPTH_OUTPUT = "outputs/depth/depth_map.png"
 
-def reconstruct_vehicle(image_path):
+def reconstruct_vehicle(
+    image_path,
+    output_name="vehicle_pointcloud"
+):
     """
     Complete reconstruction pipeline.
 
+    Args:
+        image_path (str)
+        output_name (str)
+
     Returns:
-        str: Path to generated PLY file.
+        str
     """
 
     # Vehicle Segmentation
@@ -50,21 +62,56 @@ def reconstruct_vehicle(image_path):
         MASK_OUTPUT
     )
 
-    save_pointcloud(
-        points,
-        PLY_OUTPUT
+    output_path = os.path.join(
+        "outputs",
+        "pointcloud",
+        f"{output_name}.ply"
     )
 
-    return PLY_OUTPUT
+    save_pointcloud(
+        points,
+        output_path
+    )
+    return output_path
 
+def reconstruct_dataset(dataset):
+    """
+    Reconstruct every vehicle view contained in
+    a multi-view dataset.
+
+    Args:
+        dataset (dict)
+
+    Returns:
+        dict
+    """
+    reconstructed_views = {}
+
+    for view, image_path in dataset.items():
+        print(f"\nReconstructing {view} view...")
+
+        ply_path = reconstruct_vehicle(
+            image_path,
+            output_name=view
+        )
+
+        reconstructed_views[view] = ply_path
+
+    return reconstructed_views
+    
 def main():
 
-    image_path = "data/photos/car.jpg"
+    dataset = load_vehicle_dataset(
+        "data/photos/vehicle_01"
+    )
 
-    ply_path = reconstruct_vehicle(image_path)
+    reconstructed = reconstruct_dataset(dataset)
 
-    visualize_pointcloud(ply_path)
+    print("\n===== Reconstruction Complete =====\n")
 
+    for view, ply_path in reconstructed.items():
+
+        print(f"{view:>5} -> {ply_path}")
 
 if __name__ == "__main__":
     main()
