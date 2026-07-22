@@ -143,6 +143,58 @@ def translate_pointcloud(
 
     return translated_cloud
 
+def transform_pointcloud(
+    pointcloud,
+    rotation=(0.0, 0.0, 0.0),
+    translation=(0.0, 0.0, 0.0)
+):
+    """
+    Apply a rigid transformation to a point cloud.
+
+    Args:
+        pointcloud (PointCloud)
+        rotation (tuple): Rotation angles (x, y, z) in degrees
+        translation (tuple): Translation (tx, ty, tz)
+
+    Returns:
+        PointCloud
+    """
+
+    rx, ry, rz = rotation
+    tx, ty, tz = translation
+
+    transformed = pointcloud
+
+    if rx != 0:
+        transformed = rotate_pointcloud(
+            transformed,
+            angle=rx,
+            axis="x"
+        )
+
+    if ry != 0:
+        transformed = rotate_pointcloud(
+            transformed,
+            angle=ry,
+            axis="y"
+        )
+
+    if rz != 0:
+        transformed = rotate_pointcloud(
+            transformed,
+            angle=rz,
+            axis="z"
+        )
+
+    if tx != 0 or ty != 0 or tz != 0:
+        transformed = translate_pointcloud(
+            transformed,
+            tx=tx,
+            ty=ty,
+            tz=tz
+        )
+    return transformed
+
 
 def main():
 
@@ -150,21 +202,19 @@ def main():
         "outputs/pointcloud/front.ply"
     )
 
-    translated = translate_pointcloud(
+    transformed = transform_pointcloud(
         pointcloud,
-        tx=1.0,
-        ty=0.0,
-        tz=0.0
+        rotation=(0, 90, 0),
+        translation=(1.0, 0.0, 0.0)
     )
 
     save_pointcloud(
-        translated,
-        "outputs/registration/front_translated.ply"
+        transformed,
+        "outputs/registration/front_transformed.ply"
     )
 
-    print("Translation complete.")
+    print("Transformation complete.")
 
 
 if __name__ == "__main__":
     main()
-
